@@ -3,119 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>380V 三相异步电机参数计算工具（进阶版）</title>
+    <title>380V 三相电机选型计算工具（综合版）</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacOSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-width: 680px;
+            max-width: 720px;
             margin: 30px auto;
             padding: 0 20px;
             line-height: 1.6;
+            background: #f9f9f9;
             color: #333;
         }
-        h1 { color: #1a3c6d; text-align: center; }
+        h1 {
+            color: #1a3c6d;
+            text-align: center;
+            margin-bottom: 30px;
+        }
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
         label {
             display: block;
             margin-bottom: 6px;
-            font-weight: 500;
+            font-weight: 600;
+            color: #444;
         }
         input, select {
             width: 100%;
-            padding: 10px;
+            padding: 10px 12px;
             border: 1px solid #ccc;
-            border-radius: 4px;
+            border-radius: 6px;
             box-sizing: border-box;
             font-size: 16px;
         }
         .hint {
-            font-size: 0.9em;
-            color: #666;
+            font-size: 0.88em;
+            color: #555;
             margin-top: 4px;
         }
         button {
             width: 100%;
             padding: 14px;
-            background-color: #1a73e8;
+            background: #1e73be;
             color: white;
             border: none;
-            border-radius: 6px;
-            font-size: 18px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        button:hover { background-color: #1557b0; }
-        #result {
-            margin-top: 30px;
-            padding: 20px;
-            background-color: #f8fbff;
-            border: 1px solid #d1e3ff;
             border-radius: 8px;
+            font-size: 17px;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 25px 0 15px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0f5a9e;
+        }
+        #result {
+            margin-top: 25px;
+            padding: 24px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
             display: none;
         }
-        #result h3 {
+        .result-title {
             margin-top: 0;
             color: #1a3c6d;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
         }
-        .param-item {
-            margin: 12px 0;
-            padding-left: 20px;
-            position: relative;
+        .param-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
         }
-        .param-item::before {
-            content: "•";
-            position: absolute;
-            left: 0;
-            color: #1a73e8;
-            font-weight: bold;
+        .param-row:last-child {
+            border-bottom: none;
+        }
+        .param-name {
+            font-weight: 600;
+            color: #2c3e50;
+            flex: 0 0 45%;
+        }
+        .param-value {
+            color: #2980b9;
+            font-weight: 500;
+            text-align: right;
+            flex: 1;
         }
         .important {
+            color: #c0392b;
             font-weight: bold;
-            color: #d63300;
+        }
+        .warning {
+            color: #d9534f;
+            font-weight: bold;
+        }
+        .note-box {
+            margin-top: 20px;
+            padding: 14px;
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+            font-size: 0.94em;
+        }
+        .section-title {
+            margin: 28px 0 12px;
+            color: #1a3c6d;
+            font-size: 1.15em;
+            border-left: 4px solid #1e73be;
+            padding-left: 12px;
         }
     </style>
 </head>
 <body>
 
-    <h1>380V 三相异步电机参数计算工具</h1>
+    <h1>380V 三相电机选型计算工具（综合版）</h1>
 
     <form id="calcForm">
         <div class="form-group">
-            <label for="power">额定功率 (kW) <span style="color:red">*</span></label>
-            <input type="number" id="power" required min="0" step="0.1" placeholder="例如 15">
+            <label for="power">电机额定功率 (kW) <span style="color:red">*</span></label>
+            <input type="number" id="power" required min="0" step="0.1" placeholder="例如：22 或 75">
         </div>
 
         <div class="form-group">
             <label for="efficiencyLevel">电机能效等级</label>
             <select id="efficiencyLevel">
-                <option value="normal">普通电机（老标准 / IE1~IE2）</option>
+                <option value="normal">普通电机（IE1～IE2）</option>
                 <option value="ie3" selected>高效率电机（IE3）</option>
                 <option value="ie4">超高效率电机（IE4）</option>
             </select>
-            <div class="hint">选择后会自动调整默认效率值</div>
+            <div class="hint">选择后会自动设置合理的效率范围</div>
         </div>
 
         <div class="form-group">
-            <label for="cosPhi">功率因数 cosφ</label>
-            <input type="number" id="cosPhi" min="0" max="1" step="0.01" placeholder="默认根据功率自动">
-            <div class="hint">一般范围 0.78~0.92，未输入时按典型值估算</div>
+            <label for="efficiency">电机效率 η（可手动修改）</label>
+            <input type="number" id="efficiency" step="0.001" min="0.7" max="0.98" placeholder="自动根据能效等级填写">
+            <div class="hint">未填时根据功率和能效等级自动估算</div>
         </div>
 
-        <button type="submit">计算电气参数</button>
+        <div class="form-group">
+            <label for="cosPhi">功率因数 cosφ（可手动修改）</label>
+            <input type="number" id="cosPhi" step="0.01" min="0.6" max="0.98" placeholder="自动根据功率估算">
+            <div class="hint">未填时按典型值自动选择（0.80～0.90）</div>
+        </div>
+
+        <div class="form-group">
+            <label for="safetyFactor">载流量安全系数</label>
+            <select id="safetyFactor">
+                <option value="1.25">1.25（经济型）</option>
+                <option value="1.35">1.35</option>
+                <option value="1.5" selected>1.5（推荐）</option>
+                <option value="2.0">2.0（重载/高温/频繁启动）</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="layingMethod">敷设方式（影响载流量）</label>
+            <select id="layingMethod">
+                <option value="1.00">空气中明敷</option>
+                <option value="0.92" selected>穿钢管敷设（0.90～0.95）</option>
+                <option value="0.85">穿塑料管敷设</option>
+                <option value="0.75">电缆桥架多层排列</option>
+                <option value="0.90">直埋土壤</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="temperature">环境温度（℃）</label>
+            <select id="temperature">
+                <option value="25" selected>25℃（标准）</option>
+                <option value="30">30℃</option>
+                <option value="35">35℃</option>
+                <option value="40">40℃及以上</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="length">电缆长度（米）</label>
+            <input type="number" id="length" min="0" step="1" placeholder="例如：80（用于电压降计算）">
+            <div class="hint">留空或填0则不计算电压降</div>
+        </div>
+
+        <div class="form-group">
+            <label for="cableType">电缆材质</label>
+            <select id="cableType">
+                <option value="copper" selected>铜芯（推荐）</option>
+                <option value="aluminum">铝芯</option>
+            </select>
+        </div>
+
+        <button type="submit">计算选型</button>
     </form>
 
     <div id="result">
-        <h3>计算结果（380V 三相）</h3>
-        <div class="param-item important" id="ratedCurrent"></div>
-        <div class="param-item" id="recommendedCable"></div>
-        <div class="param-item" id="recommendedBreaker"></div>
-        <div class="param-item" id="recommendedContactor"></div>
-        <div class="param-item" id="thermalRelay"></div>
-        <div class="param-item" id="startCurrent"></div>
-        <div class="param-item hint" style="margin-top:20px;">
-            注意：以上为参考值，实际选型需结合现场条件、启动方式、环境温度、电缆长度等因素，并由专业电气工程师确认。
+        <h3 class="result-title">计算结果（380V 三相）</h3>
+
+        <div class="param-row"><span class="param-name">额定电流</span><span class="param-value important" id="ratedCurrent"></span></div>
+        <div class="param-row"><span class="param-name">所需载流量（修正后）</span><span class="param-value" id="requiredAmp"></span></div>
+        <div class="param-row"><span class="param-name">推荐电缆（铜芯/铝芯）</span><span class="param-value" id="recommendedCable"></span></div>
+        <div class="param-row"><span class="param-name">电压降（若输入长度）</span><span class="param-value" id="voltageDrop"></span></div>
+
+        <div class="section-title">保护与控制设备推荐</div>
+        <div class="param-row"><span class="param-name">断路器（建议）</span><span class="param-value" id="breaker"></span></div>
+        <div class="param-row"><span class="param-name">接触器（AC-3）</span><span class="param-value" id="contactor"></span></div>
+        <div class="param-row"><span class="param-name">热继电器整定范围</span><span class="param-value" id="thermalRelay"></span></div>
+
+        <div class="section-title">其他参考</div>
+        <div class="param-row"><span class="param-name">直接启动电流（估算）</span><span class="param-value" id="startCurrent"></span></div>
+
+        <div class="note-box">
+            <strong>选型说明：</strong><br>
+            • 电压降按≤5%标准控制，若超标会自动上调电缆截面<br>
+            • 以上为参考值，实际选型应考虑启动方式、环境、负载特性等<br>
+            • 长距离、重载、频繁启动建议适当放大电缆和保护设备<br>
+            • 最终选型请由专业电气工程师现场核实
         </div>
     </div>
 
@@ -123,7 +225,25 @@
         const form = document.getElementById('calcForm');
         const resultDiv = document.getElementById('result');
 
-        // 根据功率段和能效等级确定默认效率
+        // 电缆载流量表（铜芯 PVC 空气中明敷 25℃）
+        const cableData = [
+            { size: 1.5, amp: 19, powerApprox: 7.5 },
+            { size: 2.5, amp: 26, powerApprox: 11 },
+            { size: 4,   amp: 36, powerApprox: 15 },
+            { size: 6,   amp: 47, powerApprox: 22 },
+            { size: 10,  amp: 65, powerApprox: 30 },
+            { size: 16,  amp: 90, powerApprox: 45 },
+            { size: 25,  amp: 115, powerApprox: 55 },
+            { size: 35,  amp: 140, powerApprox: 75 },
+            { size: 50,  amp: 170, powerApprox: 90 },
+            { size: 70,  amp: 215, powerApprox: 110 },
+            { size: 95,  amp: 260, powerApprox: 132 },
+            { size: 120, amp: 300, powerApprox: 160 }
+        ];
+
+        const tempFactors = { 25: 1.00, 30: 0.94, 35: 0.87, 40: 0.79 };
+
+        // 根据功率和能效等级获取默认效率
         function getDefaultEfficiency(power, level) {
             if (level === 'ie4') return 0.94;
             if (level === 'ie3') {
@@ -131,7 +251,7 @@
                 if (power < 55) return 0.915;
                 return 0.935;
             }
-            // 普通电机
+            // 普通
             if (power < 11) return 0.84;
             if (power < 55) return 0.87;
             return 0.895;
@@ -145,69 +265,120 @@
             return 0.89;
         }
 
+        // 查找最接近的标准规格
+        function findClosestStandard(value, standards) {
+            for (let s of standards) {
+                if (s >= value) return s;
+            }
+            return Math.ceil(value / 10) * 10;
+        }
+
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
+            // 获取输入
             const power = parseFloat(document.getElementById('power').value);
             if (!power || power <= 0) return alert('请输入有效的功率值');
 
-            const level = document.getElementById('efficiencyLevel').value;
+            let efficiency = parseFloat(document.getElementById('efficiency').value);
+            if (isNaN(efficiency) || efficiency <= 0) {
+                efficiency = getDefaultEfficiency(power, document.getElementById('efficiencyLevel').value);
+            }
 
             let cosPhi = parseFloat(document.getElementById('cosPhi').value);
             if (isNaN(cosPhi) || cosPhi <= 0 || cosPhi > 1) {
                 cosPhi = getDefaultCosPhi(power);
             }
 
-            const efficiency = getDefaultEfficiency(power, level);
+            const safety = parseFloat(document.getElementById('safetyFactor').value);
+            const laying = parseFloat(document.getElementById('layingMethod').value);
+            const temp = document.getElementById('temperature').value;
+            const tempFactor = tempFactors[temp] || 1.0;
+            const length = parseFloat(document.getElementById('length').value) || 0;
+            const isAluminum = document.getElementById('cableType').value === 'aluminum';
 
             // 计算额定电流
-            const U = 380;
-            const sqrt3 = Math.sqrt(3);
-            const ratedCurrent = (power * 1000) / (sqrt3 * U * cosPhi * efficiency);
-            const I_rated = ratedCurrent.toFixed(2);
+            const current = (power * 1000) / (Math.sqrt(3) * 380 * cosPhi * efficiency);
 
-            // 启动电流范围（直接启动）
-            const startMin = (ratedCurrent * 5).toFixed(0);
-            const startMax = (ratedCurrent * 7.5).toFixed(0); // 更宽范围更安全
+            // 所需载流量（考虑各种修正）
+            let requiredAmp = current * safety / (tempFactor * laying);
+            const rho = isAluminum ? 0.028 : 0.0175;
+            if (isAluminum) requiredAmp *= 1.282;
 
-            // 电缆推荐（铜芯，参考载流量约1.25~1.4倍裕量）
-            const safeI = ratedCurrent * 1.35;
-            let cable = '';
-            if (safeI <= 18) cable = '2.5 mm²';
-            else if (safeI <= 28) cable = '4 mm²';
-            else if (safeI <= 38) cable = '6 mm²';
-            else if (safeI <= 55) cable = '10 mm²';
-            else if (safeI <= 80) cable = '16 mm²';
-            else if (safeI <= 110) cable = '25 mm²';
-            else if (safeI <= 145) cable = '35 mm²';
-            else cable = '≥50 mm²（建议专业核算）';
+            // 寻找合适电缆 + 电压降控制
+            let selectedCable = null;
+            let voltageDropPercent = 0;
+            let vdExceeded = false;
 
-            // 断路器（电机保护型，D型或电机专用，约1.25~1.5倍）
-            const breakerBase = ratedCurrent * 1.35;
-            const standardBreakers = [16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250];
-            let breaker = standardBreakers.find(b => b >= breakerBase);
-            if (!breaker) breaker = '≥' + Math.ceil(breakerBase / 10) * 10;
-            breaker += ' A （D型或电机专用）';
+            for (let cable of cableData) {
+                let capacity = isAluminum ? cable.amp * 0.78 : cable.amp;
+                if (capacity >= requiredAmp) {
+                    if (length > 0) {
+                        const deltaU = Math.sqrt(3) * current * length * (rho / cable.size);
+                        voltageDropPercent = (deltaU / 380) * 100;
+                        if (voltageDropPercent <= 5) {
+                            selectedCable = cable;
+                            break;
+                        } else {
+                            vdExceeded = true;
+                        }
+                    } else {
+                        selectedCable = cable;
+                        break;
+                    }
+                }
+            }
 
-            // 接触器（AC-3类别）
-            const standardContactors = [9, 12, 18, 25, 32, 38, 40, 50, 65, 80, 95, 115, 150];
-            let contactor = standardContactors.find(c => c >= ratedCurrent);
-            if (!contactor) contactor = '≥' + Math.ceil(ratedCurrent / 10) * 10;
-            contactor += ' A （AC-3）';
+            // 如果电压降超标，找更大的截面
+            if (!selectedCable && vdExceeded && length > 0) {
+                for (let cable of cableData) {
+                    let capacity = isAluminum ? cable.amp * 0.78 : cable.amp;
+                    const deltaU = Math.sqrt(3) * current * length * (rho / cable.size);
+                    voltageDropPercent = (deltaU / 380) * 100;
+                    if (capacity >= requiredAmp && voltageDropPercent <= 5) {
+                        selectedCable = cable;
+                        break;
+                    }
+                }
+            }
 
-            // 热继电器整定范围
-            const thermalMin = (ratedCurrent * 0.95).toFixed(1);
-            const thermalMax = (ratedCurrent * 1.08).toFixed(1);
+            if (!selectedCable) {
+                selectedCable = { size: ">120", powerApprox: "更大" };
+            }
 
-            // 显示结果
-            document.getElementById('ratedCurrent').innerHTML = `<span class="important">额定电流：</span> ${I_rated} A`;
-            document.getElementById('recommendedCable').textContent = `推荐电缆（铜芯）：${cable}`;
-            document.getElementById('recommendedBreaker').textContent = `推荐断路器：${breaker}`;
-            document.getElementById('recommendedContactor').textContent = `推荐接触器：${contactor}`;
-            document.getElementById('thermalRelay').textContent = `热继电器整定范围：${thermalMin} ~ ${thermalMax} A`;
-            document.getElementById('startCurrent').textContent = `直接启动电流（估算）：${startMin} ~ ${startMax} A`;
+            // 保护设备推荐
+            const breakerBase = current * 1.35;
+            const standardBreakers = [16,20,25,32,40,50,63,80,100,125,160,200,250,315,400];
+            const breaker = findClosestStandard(breakerBase, standardBreakers);
+
+            const standardContactors = [9,12,18,25,32,38,40,50,65,80,95,115,150,185,225];
+            const contactor = findClosestStandard(current, standardContactors);
+
+            const thermalMin = (current * 0.95).toFixed(1);
+            const thermalMax = (current * 1.10).toFixed(1);
+
+            const startMin = (current * 5).toFixed(0);
+            const startMax = (current * 7.5).toFixed(0);
+
+            // 显示
+            document.getElementById('ratedCurrent').textContent = `${current.toFixed(2)} A`;
+            document.getElementById('requiredAmp').textContent = `${requiredAmp.toFixed(1)} A`;
+            document.getElementById('recommendedCable').textContent = 
+                `${selectedCable.size} mm² ${isAluminum ? '铝芯' : '铜芯'}  （参考适用功率 ≈ ${selectedCable.powerApprox} kW）`;
+
+            document.getElementById('voltageDrop').innerHTML = length > 0 
+                ? (voltageDropPercent <= 5 
+                    ? `<span style="color:#27ae60">✓ ${voltageDropPercent.toFixed(2)}%</span>` 
+                    : `<span class="warning">✗ ${voltageDropPercent.toFixed(2)}%（已上调截面）</span>`)
+                : "未输入长度，未计算";
+
+            document.getElementById('breaker').textContent = `${breaker} A （建议D型或电机专用断路器）`;
+            document.getElementById('contactor').textContent = `${contactor} A （AC-3类别）`;
+            document.getElementById('thermalRelay').textContent = `${thermalMin} ～ ${thermalMax} A`;
+            document.getElementById('startCurrent').textContent = `${startMin} ～ ${startMax} A（直接启动估算）`;
 
             resultDiv.style.display = 'block';
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
         });
     </script>
 
