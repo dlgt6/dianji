@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>380V 三相异步电机参数计算工具（进阶版）</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacOSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 680px;
+            margin: 30px auto;
+            padding: 0 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 { color: #1a3c6d; text-align: center; }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .hint {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover { background-color: #1557b0; }
+        #result {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8fbff;
+            border: 1px solid #d1e3ff;
+            border-radius: 8px;
+            display: none;
+        }
+        #result h3 {
+            margin-top: 0;
+            color: #1a3c6d;
+        }
+        .param-item {
+            margin: 12px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .param-item::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #1a73e8;
+            font-weight: bold;
+        }
+        .important {
+            font-weight: bold;
+            color: #d63300;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>380V 三相异步电机参数计算工具</h1>
+
+    <form id="calcForm">
+        <div class="form-group">
+            <label for="power">额定功率 (kW) <span style="color:red">*</span></label>
+            <input type="number" id="power" required min="0" step="0.1" placeholder="例如 15">
+        </div>
+
+        <div class="form-group">
+            <label for="efficiencyLevel">电机能效等级</label>
+            <select id="efficiencyLevel">
+                <option value="normal">普通电机（老标准 / IE1~IE2）</option>
+                <option value="ie3" selected>高效率电机（IE3）</option>
+                <option value="ie4">超高效率电机（IE4）</option>
+            </select>
+            <div class="hint">选择后会自动调整默认效率值</div>
+        </div>
+
+        <div class="form-group">
+            <label for="cosPhi">功率因数 cosφ</label>
+            <input type="number" id="cosPhi" min="0" max="1" step="0.01" placeholder="默认根据功率自动">
+            <div class="hint">一般范围 0.78~0.92，未输入时按典型值估算</div>
+        </div>
+
+        <button type="submit">计算电气参数</button>
+    </form>
+
+    <div id="result">
+        <h3>计算结果（380V 三相）</h3>
+        <div class="param-item important" id="ratedCurrent"></div>
+        <div class="param-item" id="recommendedCable"></div>
+        <div class="param-item" id="recommendedBreaker"></div>
+        <div class="param-item" id="recommendedContactor"></div>
+        <div class="param-item" id="thermalRelay"></div>
+        <div class="param-item" id="startCurrent"></div>
+        <div class="param-item hint" style="margin-top:20px;">
+            注意：以上为参考值，实际选型需结合现场条件、启动方式、环境温度、电缆长度等因素，并由专业电气工程师确认。
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('calcForm');
+        const resultDiv = document.getElementById('result');
+
+        // 根据功率段和能效等级确定默认效率
+        function getDefaultEfficiency(power, level) {
+            if (level === 'ie4') return 0.94;
+            if (level === 'ie3') {
+                if (power < 11) return 0.895;
+                if (power < 55) return 0.915;
+                return 0.935;
+            }
+            // 普通电机
+            if (power < 11) return 0.84;
+            if (power < 55) return 0.87;
+            return 0.895;
+        }
+
+        // 根据功率估算典型功率因数
+        function getDefaultCosPhi(power) {
+            if (power < 4) return 0.80;
+            if (power < 15) return 0.84;
+            if (power < 55) return 0.87;
+            return 0.89;
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const power = parseFloat(document.getElementById('power').value);
+            if (!power || power <= 0) return alert('请输入有效的功率值');
+
+            const level = document.getElementById('efficiencyLevel').value;
+
+            let cosPhi = parseFloat(document.getElementById('cosPhi').value);
+            if (isNaN(cosPhi) || cosPhi <= 0 || cosPhi > 1) {
+                cosPhi = getDefaultCosPhi(power);
+            }
+
+            const efficiency = getDefaultEfficiency(power, level);
+
+            // 计算额定电流
+            const U = 380;
+            const sqrt3 = Math.sqrt(3);
+            const ratedCurrent = (power * 1000) / (sqrt3 * U * cosPhi * efficiency);
+            const I_rated = ratedCurrent.toFixed(2);
+
+            // 启动电流范围（直接启动）
+            const startMin = (ratedCurrent * 5).toFixed(0);
+            const startMax = (ratedCurrent * 7.5).toFixed(0); // 更宽范围更安全
+
+            // 电缆推荐（铜芯，参考载流量约1.25~1.4倍裕量）
+            const safeI = ratedCurrent * 1.35;
+            let cable = '';
+            if (safeI <= 18) cable = '2.5 mm²';
+            else if (safeI <= 28) cable = '4 mm²';
+            else if (safeI <= 38) cable = '6 mm²';
+            else if (safeI <= 55) cable = '10 mm²';
+            else if (safeI <= 80) cable = '16 mm²';
+            else if (safeI <= 110) cable = '25 mm²';
+            else if (safeI <= 145) cable = '35 mm²';
+            else cable = '≥50 mm²（建议专业核算）';
+
+            // 断路器（电机保护型，D型或电机专用，约1.25~1.5倍）
+            const breakerBase = ratedCurrent * 1.35;
+            const standardBreakers = [16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250];
+            let breaker = standardBreakers.find(b => b >= breakerBase);
+            if (!breaker) breaker = '≥' + Math.ceil(breakerBase / 10) * 10;
+            breaker += ' A （D型或电机专用）';
+
+            // 接触器（AC-3类别）
+            const standardContactors = [9, 12, 18, 25, 32, 38, 40, 50, 65, 80, 95, 115, 150];
+            let contactor = standardContactors.find(c => c >= ratedCurrent);
+            if (!contactor) contactor = '≥' + Math.ceil(ratedCurrent / 10) * 10;
+            contactor += ' A （AC-3）';
+
+            // 热继电器整定范围
+            const thermalMin = (ratedCurrent * 0.95).toFixed(1);
+            const thermalMax = (ratedCurrent * 1.08).toFixed(1);
+
+            // 显示结果
+            document.getElementById('ratedCurrent').innerHTML = `<span class="important">额定电流：</span> ${I_rated} A`;
+            document.getElementById('recommendedCable').textContent = `推荐电缆（铜芯）：${cable}`;
+            document.getElementById('recommendedBreaker').textContent = `推荐断路器：${breaker}`;
+            document.getElementById('recommendedContactor').textContent = `推荐接触器：${contactor}`;
+            document.getElementById('thermalRelay').textContent = `热继电器整定范围：${thermalMin} ~ ${thermalMax} A`;
+            document.getElementById('startCurrent').textContent = `直接启动电流（估算）：${startMin} ~ ${startMax} A`;
+
+            resultDiv.style.display = 'block';
+        });
+    </script>
+
+</body>
+</html>
