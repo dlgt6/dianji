@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>380V 三相电机选型计算工具（综合版）</title>
+    <title>380V 三相电机选型计算工具（支持功率/电流双输入）</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacOSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -117,35 +117,39 @@
     </style>
 </head>
 <body>
-
-    <h1>380V 三相电机选型计算工具（综合版）</h1>
-
+    <h1>380V 三相电机选型计算工具（支持功率/电流双输入）</h1>
     <form id="calcForm">
         <div class="form-group">
-            <label for="power">电机额定功率 (kW) <span style="color:red">*</span></label>
-            <input type="number" id="power" required min="0" step="0.1" placeholder="例如：22 或 75">
+            <label for="power">电机额定功率 (kW)</label>
+            <input type="number" id="power" min="0" step="0.1" placeholder="例如：22 或 75">
+            <div class="hint">功率和电流二选一，至少填一个</div>
+        </div>
+        <div class="form-group">
+            <label for="current">电机额定电流 (A)</label>
+            <input type="number" id="current" min="0" step="0.1" placeholder="例如：42 或 145">
+            <div class="hint">已知电流可直接填写，优先级高于功率计算</div>
         </div>
 
         <div class="form-group">
-            <label for="efficiencyLevel">电机能效等级</label>
+            <label for="efficiencyLevel">电机能效等级（仅功率模式有效）</label>
             <select id="efficiencyLevel">
                 <option value="normal">普通电机（IE1～IE2）</option>
                 <option value="ie3" selected>高效率电机（IE3）</option>
                 <option value="ie4">超高效率电机（IE4）</option>
             </select>
-            <div class="hint">选择后会自动设置合理的效率范围</div>
+            <div class="hint">选择后会影响效率默认值</div>
         </div>
 
         <div class="form-group">
-            <label for="efficiency">电机效率 η（可手动修改）</label>
-            <input type="number" id="efficiency" step="0.001" min="0.7" max="0.98" placeholder="自动根据能效等级填写">
-            <div class="hint">未填时根据功率和能效等级自动估算</div>
+            <label for="efficiency">电机效率 η</label>
+            <input type="number" id="efficiency" step="0.001" min="0.7" max="0.98" placeholder="不填自动根据功率估算">
+            <div class="hint">典型范围 0.85～0.94</div>
         </div>
 
         <div class="form-group">
-            <label for="cosPhi">功率因数 cosφ（可手动修改）</label>
-            <input type="number" id="cosPhi" step="0.01" min="0.6" max="0.98" placeholder="自动根据功率估算">
-            <div class="hint">未填时按典型值自动选择（0.80～0.90）</div>
+            <label for="cosPhi">功率因数 cosφ</label>
+            <input type="number" id="cosPhi" step="0.01" min="0.6" max="0.98" placeholder="不填自动估算">
+            <div class="hint">典型范围 0.82～0.90</div>
         </div>
 
         <div class="form-group">
@@ -198,23 +202,23 @@
 
     <div id="result">
         <h3 class="result-title">计算结果（380V 三相）</h3>
-
         <div class="param-row"><span class="param-name">额定电流</span><span class="param-value important" id="ratedCurrent"></span></div>
         <div class="param-row"><span class="param-name">所需载流量（修正后）</span><span class="param-value" id="requiredAmp"></span></div>
-        <div class="param-row"><span class="param-name">推荐电缆（铜芯/铝芯）</span><span class="param-value" id="recommendedCable"></span></div>
+        <div class="param-row"><span class="param-name">推荐电缆</span><span class="param-value" id="recommendedCable"></span></div>
         <div class="param-row"><span class="param-name">电压降（若输入长度）</span><span class="param-value" id="voltageDrop"></span></div>
-
+        
         <div class="section-title">保护与控制设备推荐</div>
         <div class="param-row"><span class="param-name">断路器（建议）</span><span class="param-value" id="breaker"></span></div>
         <div class="param-row"><span class="param-name">接触器（AC-3）</span><span class="param-value" id="contactor"></span></div>
         <div class="param-row"><span class="param-name">热继电器整定范围</span><span class="param-value" id="thermalRelay"></span></div>
-
+        
         <div class="section-title">其他参考</div>
         <div class="param-row"><span class="param-name">直接启动电流（估算）</span><span class="param-value" id="startCurrent"></span></div>
 
         <div class="note-box">
             <strong>选型说明：</strong><br>
             • 电压降按≤5%标准控制，若超标会自动上调电缆截面<br>
+            • 输入电流时优先使用输入值（效率和cosφ仅作参考显示）<br>
             • 以上为参考值，实际选型应考虑启动方式、环境、负载特性等<br>
             • 长距离、重载、频繁启动建议适当放大电缆和保护设备<br>
             • 最终选型请由专业电气工程师现场核实
@@ -233,25 +237,29 @@
             { size: 6,   amp: 47, powerApprox: 22 },
             { size: 10,  amp: 65, powerApprox: 30 },
             { size: 16,  amp: 90, powerApprox: 45 },
-            { size: 25,  amp: 115, powerApprox: 55 },
-            { size: 35,  amp: 140, powerApprox: 75 },
-            { size: 50,  amp: 170, powerApprox: 90 },
-            { size: 70,  amp: 215, powerApprox: 110 },
-            { size: 95,  amp: 260, powerApprox: 132 },
-            { size: 120, amp: 300, powerApprox: 160 }
+            { size: 25,  amp: 115,powerApprox: 55 },
+            { size: 35,  amp: 140,powerApprox: 75 },
+            { size: 50,  amp: 170,powerApprox: 90 },
+            { size: 70,  amp: 215,powerApprox: 110 },
+            { size: 95,  amp: 260,powerApprox: 132 },
+            { size: 120, amp: 300,powerApprox: 160 }
         ];
 
         const tempFactors = { 25: 1.00, 30: 0.94, 35: 0.87, 40: 0.79 };
 
         // 根据功率和能效等级获取默认效率
         function getDefaultEfficiency(power, level) {
-            if (level === 'ie4') return 0.94;
+            if (level === 'ie4') {
+                if (power < 11) return 0.91;
+                if (power < 55) return 0.935;
+                return 0.955;
+            }
             if (level === 'ie3') {
                 if (power < 11) return 0.895;
                 if (power < 55) return 0.915;
                 return 0.935;
             }
-            // 普通
+            // 普通电机
             if (power < 11) return 0.84;
             if (power < 55) return 0.87;
             return 0.895;
@@ -259,13 +267,14 @@
 
         // 根据功率估算典型功率因数
         function getDefaultCosPhi(power) {
-            if (power < 4) return 0.80;
-            if (power < 15) return 0.84;
-            if (power < 55) return 0.87;
+            if (power < 4)   return 0.82;
+            if (power < 11)  return 0.84;
+            if (power < 30)  return 0.86;
+            if (power < 75)  return 0.88;
             return 0.89;
         }
 
-        // 查找最接近的标准规格
+        // 查找最接近的标准规格（向上取整到标准值）
         function findClosestStandard(value, standards) {
             for (let s of standards) {
                 if (s >= value) return s;
@@ -277,17 +286,36 @@
             e.preventDefault();
 
             // 获取输入
-            const power = parseFloat(document.getElementById('power').value);
-            if (!power || power <= 0) return alert('请输入有效的功率值');
+            const powerInput = parseFloat(document.getElementById('power').value) || 0;
+            const currentInput = parseFloat(document.getElementById('current').value) || 0;
 
-            let efficiency = parseFloat(document.getElementById('efficiency').value);
-            if (isNaN(efficiency) || efficiency <= 0) {
-                efficiency = getDefaultEfficiency(power, document.getElementById('efficiencyLevel').value);
+            if (powerInput <= 0 && currentInput <= 0) {
+                alert('请至少填写「功率」或「电流」其中一项');
+                return;
             }
 
+            let efficiency = parseFloat(document.getElementById('efficiency').value);
             let cosPhi = parseFloat(document.getElementById('cosPhi').value);
-            if (isNaN(cosPhi) || cosPhi <= 0 || cosPhi > 1) {
-                cosPhi = getDefaultCosPhi(power);
+            const efficiencyLevel = document.getElementById('efficiencyLevel').value;
+
+            let current;  // 最终使用的额定电流
+
+            // 优先使用用户直接输入的电流
+            if (currentInput > 0) {
+                current = currentInput;
+                // 显示用的默认参考值
+                if (isNaN(efficiency)) efficiency = 0.91;
+                if (isNaN(cosPhi)) cosPhi = 0.87;
+            } 
+            // 使用功率计算电流
+            else {
+                if (isNaN(efficiency) || efficiency <= 0) {
+                    efficiency = getDefaultEfficiency(powerInput, efficiencyLevel);
+                }
+                if (isNaN(cosPhi) || cosPhi <= 0 || cosPhi > 1) {
+                    cosPhi = getDefaultCosPhi(powerInput);
+                }
+                current = (powerInput * 1000) / (Math.sqrt(3) * 380 * cosPhi * efficiency);
             }
 
             const safety = parseFloat(document.getElementById('safetyFactor').value);
@@ -297,15 +325,12 @@
             const length = parseFloat(document.getElementById('length').value) || 0;
             const isAluminum = document.getElementById('cableType').value === 'aluminum';
 
-            // 计算额定电流
-            const current = (power * 1000) / (Math.sqrt(3) * 380 * cosPhi * efficiency);
-
-            // 所需载流量（考虑各种修正）
+            // 所需载流量（考虑安全系数、温度、敷设方式）
             let requiredAmp = current * safety / (tempFactor * laying);
             const rho = isAluminum ? 0.028 : 0.0175;
-            if (isAluminum) requiredAmp *= 1.282;
+            if (isAluminum) requiredAmp *= 1.282;  // 铝芯载流量约铜芯的78%
 
-            // 寻找合适电缆 + 电压降控制
+            // 选电缆 + 电压降控制
             let selectedCable = null;
             let voltageDropPercent = 0;
             let vdExceeded = false;
@@ -329,7 +354,7 @@
                 }
             }
 
-            // 如果电压降超标，找更大的截面
+            // 电压降超标 → 找更大截面
             if (!selectedCable && vdExceeded && length > 0) {
                 for (let cable of cableData) {
                     let capacity = isAluminum ? cable.amp * 0.78 : cable.amp;
@@ -360,18 +385,16 @@
             const startMin = (current * 5).toFixed(0);
             const startMax = (current * 7.5).toFixed(0);
 
-            // 显示
+            // 显示结果
             document.getElementById('ratedCurrent').textContent = `${current.toFixed(2)} A`;
             document.getElementById('requiredAmp').textContent = `${requiredAmp.toFixed(1)} A`;
             document.getElementById('recommendedCable').textContent = 
-                `${selectedCable.size} mm² ${isAluminum ? '铝芯' : '铜芯'}  （参考适用功率 ≈ ${selectedCable.powerApprox} kW）`;
-
-            document.getElementById('voltageDrop').innerHTML = length > 0 
-                ? (voltageDropPercent <= 5 
-                    ? `<span style="color:#27ae60">✓ ${voltageDropPercent.toFixed(2)}%</span>` 
+                `${selectedCable.size} mm² ${isAluminum ? '铝芯' : '铜芯'} （参考适用功率 ≈ ${selectedCable.powerApprox} kW）`;
+            document.getElementById('voltageDrop').innerHTML = length > 0
+                ? (voltageDropPercent <= 5
+                    ? `<span style="color:#27ae60">✓ ${voltageDropPercent.toFixed(2)}%</span>`
                     : `<span class="warning">✗ ${voltageDropPercent.toFixed(2)}%（已上调截面）</span>`)
                 : "未输入长度，未计算";
-
             document.getElementById('breaker').textContent = `${breaker} A （建议D型或电机专用断路器）`;
             document.getElementById('contactor').textContent = `${contactor} A （AC-3类别）`;
             document.getElementById('thermalRelay').textContent = `${thermalMin} ～ ${thermalMax} A`;
@@ -381,6 +404,5 @@
             resultDiv.scrollIntoView({ behavior: 'smooth' });
         });
     </script>
-
 </body>
 </html>
